@@ -7,6 +7,7 @@ import CourseAnalyticsTab from "./CourseAnalyticsTab";
 import CollegesTab from "./CollegesTab";
 
 export default function DashboardTabs() {
+  const API_URL =process.env.NEXT_PUBLIC_API_BASE_URL;
   const [activeTab, setActiveTab] = useState("overview");
   const [dashboard, setDashboard] = useState(null);
 
@@ -14,8 +15,7 @@ export default function DashboardTabs() {
     async function fetchDashboard() {
       const token = localStorage.getItem("access_token");
 
-      const res = await fetch(
-        "http://127.0.0.1:8000/api/admin/admin/dashboard",
+      const res = await fetch(API_URL,
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 
 export default function EditCourseModal({ course, onClose, onSuccess }) {
-  const API_URL = "http://127.0.0.1:8000/api/admin/courses";
+  const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [formData, setFormData] = useState({
     title: course.title || "",

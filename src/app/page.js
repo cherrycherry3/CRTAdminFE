@@ -13,11 +13,14 @@ export default function Home() {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [loading, isAuthenticated, router]);
+ useEffect(() => {
+  const token = localStorage.getItem("access_token");
+
+  if (!token) {
+    router.push("/login");
+  }
+}, [router]);
+
 
   if (loading) return null;
 

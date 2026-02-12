@@ -1,21 +1,52 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "../providers/AuthProvider";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      await login({ email, password });
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          role: "ADMIN",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Login failed");
+      }
+
+      // Save auth data
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("userEmail", email);
+      localStorage.setItem("role", data.role);
+
+      router.push("/");
     } catch (err) {
-      setError("Invalid email or password");
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,8 +76,12 @@ export default function LoginPage() {
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <button className="w-full rounded-lg bg-blue-600 py-2 text-white">
-            Login
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 py-2 text-white disabled:opacity-50"
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

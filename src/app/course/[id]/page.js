@@ -5,10 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 export default function CourseDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-
-  const COURSE_API = `http://127.0.0.1:8000/api/admin/courses/${id}`;
-  const UPLOAD_API = `http://127.0.0.1:8000/api/admin/courses/${id}/files`;
-  const PDFS_API = `http://127.0.0.1:8000/api/admin/courses/${id}/pdfs`;
+ const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const COURSE_API = `${API_URL}/api/admin/courses/${id}`;
+  const UPLOAD_API = `${API_URL}/api/admin/courses/${id}/files`;
+  const PDFS_API = `${API_URL}/api/admin/courses/${id}/pdfs`;
 
   const fileInputRef = useRef(null);
 
