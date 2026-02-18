@@ -2,52 +2,72 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: ["main"]
-    paths:
-      - "src/**"
-      - "package.json"
-      - "package-lock.json"
+    branches:
+      - main
 
 jobs:
-  deploy:
+  deploy-frontend:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+    # 1️⃣ Checkout code
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: npm ci
+    # 2️⃣ Setup Node
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
 
-      - name: Build Next.js
-        run: npm run build
+    # 3️⃣ Install dependencies
+    - name: Install Dependencies
+      run: npm ci
 
-      - name: Prepare Deploy Folder
-        run: |
-          mkdir deploy
-          cp -r .next public package.json deploy/
+    # 4️⃣ Build Next.js
+    - name: Build Application
+      run: npm run build
 
-      - name: Deploy to Server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deploy/**"
-          target: "/home/${{ secrets.SSH_USER }}/crt-app/frontend/"
-          overwrite: true
+    # 5️⃣ Setup SSH
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Restart Frontend
-        uses: appleboy/ssh-action@v1.0.1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            pm2 restart crt-frontend || pm2 start npm --name crt-frontend -- start
+    # 6️⃣ Deploy to Server
+    - name: Deploy Frontend
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/crt-app/frontend"
+
+        rsync -avz --delete \
+          .next \
+          public \
+          package.json \
+          package-lock.json \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/crt-app/frontend/
+
+    # 7️⃣ Install Production Dependencies on Server
+    - name: Install Production Dependencies
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          cd ~/crt-app/frontend &&
+          npm ci --production
+        "
+
+    # 8️⃣ Restart PM2 Frontend
+    - name: Restart Frontend (PM2)
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          pm2 delete crt-frontend || true
+          pm2 start npm --name crt-frontend -- start
+          pm2 save
+        "
+
+    # 9️⃣ Verify PM2
+    - name: Verify PM2
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "pm2 status"
